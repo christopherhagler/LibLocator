@@ -17,17 +17,21 @@ def extract_library_name(line):
             return lib_name.replace('-', '_')
     return line.strip().replace('-', '_')
 
-# Function to check if a library is used in a specific directory
-def is_library_used(library, directory_path):
+# Function to check if a library is used in a specific directory and log the usage
+def log_library_usage(library, directory_path):
+    found = False
     for root, dirs, files in os.walk(directory_path):
         for file in files:
             if file.endswith('.py'):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
-                    contents = f.read()
-                    if re.search(rf'\bimport {library}\b|\bfrom {library} import\b', contents):
-                        return True
-    return False
+                    for line_number, line in enumerate(f, 1):
+                        if re.search(rf'\bimport {library}\b|\bfrom {library} import\b', line):
+                            print(f"Library '{library}' imported in {file_path} at line {line_number}")
+                            found = True
+    if not found:
+        print(f"No import found for library '{library}'")
+    return found
 
 def main(codebase_path, dry_run):
     requirements_path = find_requirements_file(codebase_path)
@@ -43,8 +47,9 @@ def main(codebase_path, dry_run):
 
     libraries = [extract_library_name(lib) for lib in libraries]
 
-    src_libraries = set(lib for lib in libraries if is_library_used(lib, src_path))
-    test_libraries = set(lib for lib in libraries if is_library_used(lib, test_path))
+    # Using log_library_usage function
+    src_libraries = set(lib for lib in libraries if log_library_usage(lib, src_path))
+    test_libraries = set(lib for lib in libraries if log_library_usage(lib, test_path))
 
     # Handling dry run
     if dry_run:
