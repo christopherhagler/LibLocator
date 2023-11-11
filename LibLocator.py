@@ -29,7 +29,7 @@ def is_library_used(library, directory_path):
                         return True
     return False
 
-def main(codebase_path):
+def main(codebase_path, dry_run):
     requirements_path = find_requirements_file(codebase_path)
     if not requirements_path:
         print("requirements.txt not found in the provided path.")
@@ -45,6 +45,14 @@ def main(codebase_path):
 
     src_libraries = set(lib for lib in libraries if is_library_used(lib, src_path))
     test_libraries = set(lib for lib in libraries if is_library_used(lib, test_path))
+
+    # Handling dry run
+    if dry_run:
+        print("Dry run enabled. The following changes would be made:")
+        print("requirements.txt:", src_libraries.union(test_libraries))
+        print("test-requirements.txt:", test_libraries - src_libraries)
+        print("dev-requirements.txt:", set(libraries) - src_libraries - test_libraries)
+        return
 
     # Writing to different requirements files based on usage
     with open(requirements_path, 'w') as req_file, \
@@ -66,6 +74,7 @@ def main(codebase_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Categorize dependencies based on usage in src and test directories.")
     parser.add_argument('-f', '--folder', required=True, help="Path to the codebase folder.")
+    parser.add_argument('-m', '--dry-run', action='store_true', help="Perform a dry run without making actual changes.")
     args = parser.parse_args()
 
-    main(args.folder)
+    main(args.folder, args.dry_run)
