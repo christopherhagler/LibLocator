@@ -1,40 +1,41 @@
-LibLocator: Intelligent Python Dependency Organizer
+# LibLocator: Intelligent Python Dependency Organizer
 
-Overview
+## Overview
 
-LibLocator is an innovative script, with its initial codebase generated with the assistance of ChatGPT, designed to streamline the management of Python project dependencies. It meticulously scans your Python project, targeting the src/ and test/ directories, to intelligently categorize dependencies into requirements.txt, test-requirements.txt, and dev-requirements.txt. This tool is perfect for developers looking to enhance code clarity and reduce unnecessary bloat in their projects.
+**LibLocator** is an innovative script, with its initial codebase generated with the assistance of ChatGPT, designed to streamline the management of Python project dependencies. It meticulously scans your Python project, targeting the src/ and test/ directories, to intelligently categorize dependencies into requirements.txt, test-requirements.txt, and dev-requirements.txt. This tool is perfect for developers looking to enhance code clarity and reduce unnecessary bloat in their projects.
 
-Key Features
+## Key Features
 
-Automated Dependency Categorization: Automatically sorts dependencies into appropriate categories based on their usage in different parts of your code.
-Precision Scanning: Identifies which dependencies are actively used in your project's src/ and test/ directories.
-Hyphen-to-Underscore Conversion: Adapts to Python’s naming conventions for accurate identification of libraries.
-Argparse Integration: Allows users to specify their project directory using the -f flag for a user-friendly experience.
-Clean and Maintainable Codebases: Helps maintain a lean, efficient, and more maintainable codebase by sorting and removing unused libraries.
-Installation
+- **Automated Dependency Categorization**: Automatically sorts dependencies into appropriate categories based on their usage in different parts of your code.
+- **Precision Scanning**: Identifies which dependencies are actively used in your project's src/ and test/ directories.
+- **Hyphen-to-Underscore Conversion**: Adapts to Python’s naming conventions for accurate identification of libraries.
+- **Argparse Integration**: Allows users to specify their project directory using the -f flag for a user-friendly experience.
+- **Clean and Maintainable Codebases**: Helps maintain a lean, efficient, and more maintainable codebase by sorting and removing unused libraries.
 
+## Installation
 To install LibLocator, simply clone the repository to your local machine:
 
-bash
+```bash
 Copy code
-git clone https://github.com/yourusername/LibLocator.git
+git clone https://github.com/christopherhagler/LibLocator.git
 cd LibLocator
+```
 Ensure that you have Python installed on your system. LibLocator is compatible with Python 3.x.
 
 Usage
 
 Navigate to the directory containing LibLocator and run the script:
 
-bash
-Copy code
+```bash
 python liblocator.py -f /path/to/your/codebase
+```
 Replace /path/to/your/codebase with the actual path to your Python project.
 
-How It Works
+## How It Works
 
 LibLocator works by scanning the specified codebase directory, identifying the libraries used in the src and test directories. It then categorizes these libraries into requirements.txt, test-requirements.txt, or dev-requirements.txt based on their usage.
 
-Contributing
+## Contributing
 
 Contributions to LibLocator are welcome! If you have suggestions for improvements or bug fixes, feel free to:
 
