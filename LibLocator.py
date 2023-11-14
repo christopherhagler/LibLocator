@@ -9,29 +9,25 @@ def find_requirements_file(codebase_path):
             return os.path.join(root, 'requirements.txt')
     return None
 
-# Function to extract just the library name from a requirements.txt line and replace hyphens with underscores
-def extract_library_name(line):
+# Function to extract just the library name from a requirements.txt line for import check
+def extract_library_name_for_import(line):
     for specifier in ['==', '>=', '<=', '>', '<', '~=']:
         if specifier in line:
-            lib_name = line.split(specifier)[0].strip()
-            return lib_name.replace('-', '_')
-    return line.strip().replace('-', '_')
+            return line.split(specifier)[0].strip()
+    return line.strip()
 
 # Function to check if a library is used in a specific directory and log the usage
 def log_library_usage(library, directory_path):
-    found = False
     for root, dirs, files in os.walk(directory_path):
         for file in files:
             if file.endswith('.py'):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
-                    for line_number, line in enumerate(f, 1):
+                    for line in f:
                         if re.search(rf'\bimport {library}\b|\bfrom {library} import\b', line):
-                            print(f"Library '{library}' imported in {file_path} at line {line_number}")
-                            found = True
-    if not found:
-        print(f"No import found for library '{library}'")
-    return found
+                            print(f"Library '{library}' imported in {file_path}")
+                            return True
+    return False
 
 def main(codebase_path, dry_run):
     requirements_path = find_requirements_file(codebase_path)
@@ -45,16 +41,22 @@ def main(codebase_path, dry_run):
     with open(requirements_path, 'r') as file:
         libraries = file.readlines()
 
-    libraries = [extract_library_name(lib) for lib in libraries]
+    libraries = [lib.strip() for lib in libraries]
 
-    # Using log_library_usage function
-    src_libraries = set(lib for lib in libraries if log_library_usage(lib, src_path))
-    test_libraries = set(lib for lib in libraries if log_library_usage(lib, test_path))
+    # Using log_library_usage function with the original line
+    src_libraries = set()
+    test_libraries = set()
+    for line in libraries:
+        lib_name = extract_library_name_for_import(line)
+        if log_library_usage(lib_name, src_path):
+            src_libraries.add(line)
+        elif log_library_usage(lib_name, test_path):
+            test_libraries.add(line)
 
     # Handling dry run
     if dry_run:
         print("Dry run enabled. The following changes would be made:")
-        print("requirements.txt:", src_libraries.union(test_libraries))
+        print("requirements.txt:", src_libraries)
         print("test-requirements.txt:", test_libraries - src_libraries)
         print("dev-requirements.txt:", set(libraries) - src_libraries - test_libraries)
         return
@@ -65,14 +67,12 @@ def main(codebase_path, dry_run):
          open(os.path.join(codebase_path, 'dev-requirements.txt'), 'w') as dev_req_file:
 
         for line in libraries:
-            lib_name = extract_library_name(line)
-            if lib_name in src_libraries or lib_name in test_libraries:
+            if line in src_libraries:
                 req_file.write(line + '\n')
-            elif lib_name not in src_libraries and lib_name not in test_libraries:
-                dev_req_file.write(line + '\n')
-
-            if lib_name in test_libraries and lib_name not in src_libraries:
+            elif line in test_libraries and line not in src_libraries:
                 test_req_file.write(line + '\n')
+            elif line not in src_libraries and line not in test_libraries:
+                dev_req_file.write(line + '\n')
 
     print("Updated requirements files based on usage.")
 
