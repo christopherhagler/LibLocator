@@ -12,8 +12,17 @@ def find_requirements_file(codebase_path):
 
 # Function to extract just the library name and version from a requirements.txt line for import check
 def extract_library_name_and_version(line):
-    lib_name, _, version = line.partition('=')
-    return lib_name.strip(), version.strip()
+    # List of possible specifiers
+    specifiers = ['==', '>=', '<=', '>', '<', '~=']
+    
+    # Check if line contains any of the specifiers and split accordingly
+    for specifier in specifiers:
+        if specifier in line:
+            lib_name, version = line.split(specifier, 1)
+            return lib_name.strip(), specifier + version.strip()
+    
+    # If no specifier is found, return the entire line as the library name and an empty string for version
+    return line.strip(), ''
 
 # Function to check if a library is used in a specific directory and log the usage
 def log_library_usage(library, directory_path):
