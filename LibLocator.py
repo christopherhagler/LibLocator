@@ -5,11 +5,11 @@ import re
 from tabulate import tabulate
 
 
-# Function to locate requirements.txt in the codebase
+# Function to locate a file in the codebase
 def find_file(codebase_path, file):
     for root, dirs, files in os.walk(codebase_path):
         if file in files:
-            return os.path.join(root, 'requirements.txt')
+            return os.path.join(root, file)
     return None
 
 
