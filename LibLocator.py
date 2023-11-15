@@ -24,8 +24,8 @@ def extract_library_name_and_version(line):
             lib_name, version = line.split(specifier, 1)
             return lib_name.strip(), specifier, version.strip()
 
-    # If no specifier is found, return the entire line as the library name and an empty string for version
-    return line.strip(), ''
+    # If no specifier is found, return the entire line as the library name and an empty string for specifier and version
+    return line.strip(), '', ''
 
 
 # Function to check if a library is used in a specific directory and log the usage
