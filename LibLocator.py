@@ -19,7 +19,7 @@ def extract_library_name_and_version(line):
     for specifier in specifiers:
         if specifier in line:
             lib_name, version = line.split(specifier, 1)
-            return lib_name.strip(), specifier + version.strip()
+            return lib_name.strip(), version.strip()
     
     # If no specifier is found, return the entire line as the library name and an empty string for version
     return line.strip(), ''
