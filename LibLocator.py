@@ -111,7 +111,7 @@ def main(codebase_path, dry_run):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Categorize dependencies based on usage in src and test directories.")
     parser.add_argument('-f', '--folder', required=True, help="Path to the codebase folder.")
-    parser.add_argument('-m', '--dry-run', action='store_true', help="Perform a dry run without making actual changes.")
+    parser.add_argument('-m', '--mock-run', action='store_true', help="Perform a mock run without making actual changes.")
     args = parser.parse_args()
 
     main(args.folder, args.dry_run)
