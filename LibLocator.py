@@ -1,6 +1,7 @@
 import os
 import re
 import argparse
+from tabulate import tabulate
 
 # Function to locate requirements.txt in the codebase
 def find_requirements_file(codebase_path):
@@ -9,12 +10,10 @@ def find_requirements_file(codebase_path):
             return os.path.join(root, 'requirements.txt')
     return None
 
-# Function to extract just the library name from a requirements.txt line for import check
-def extract_library_name_for_import(line):
-    for specifier in ['==', '>=', '<=', '>', '<', '~=']:
-        if specifier in line:
-            return line.split(specifier)[0].strip()
-    return line.strip()
+# Function to extract just the library name and version from a requirements.txt line for import check
+def extract_library_name_and_version(line):
+    lib_name, _, version = line.partition('=')
+    return lib_name.strip(), version.strip()
 
 # Function to check if a library is used in a specific directory and log the usage
 def log_library_usage(library, directory_path):
@@ -25,7 +24,6 @@ def log_library_usage(library, directory_path):
                 with open(file_path, 'r') as f:
                     for line in f:
                         if re.search(rf'\bimport {library}\b|\bfrom {library} import\b', line):
-                            print(f"Library '{library}' imported in {file_path}")
                             return True
     return False
 
@@ -41,24 +39,39 @@ def main(codebase_path, dry_run):
     with open(requirements_path, 'r') as file:
         libraries = file.readlines()
 
-    libraries = [lib.strip() for lib in libraries]
+    libraries_status = []
 
-    # Using log_library_usage function with the original line
-    src_libraries = set()
-    test_libraries = set()
     for line in libraries:
-        lib_name = extract_library_name_for_import(line)
-        if log_library_usage(lib_name, src_path):
-            src_libraries.add(line)
-        elif log_library_usage(lib_name, test_path):
-            test_libraries.add(line)
+        line = line.strip()
+        if not line or line.startswith('#'):  # Skip empty lines and comments
+            continue
 
+        lib_name, version = extract_library_name_and_version(line)
+        used_in_src = log_library_usage(lib_name, src_path)
+        used_in_test = log_library_usage(lib_name, test_path)
+
+        if used_in_src:
+            usage = 'src'
+            dest_file = 'requirements.txt'
+        elif used_in_test:
+            usage = 'test'
+            dest_file = 'test-requirements.txt'
+        else:
+            usage = 'dev'
+            dest_file = 'dev-requirements.txt'
+
+        libraries_status.append([lib_name, version, usage, dest_file])
+
+    # Displaying the table
+    print(tabulate(libraries_status, headers=['Library', 'Version', 'Usage', 'Requirements File']))
+
+    # Rest of the script remains the same...
     # Handling dry run
     if dry_run:
         print("Dry run enabled. The following changes would be made:")
-        print("requirements.txt:", src_libraries)
-        print("test-requirements.txt:", test_libraries - src_libraries)
-        print("dev-requirements.txt:", set(libraries) - src_libraries - test_libraries)
+        print("requirements.txt:", [lib[0] for lib in libraries_status if lib[3] == 'requirements.txt'])
+        print("test-requirements.txt:", [lib[0] for lib in libraries_status if lib[3] == 'test-requirements.txt'])
+        print("dev-requirements.txt:", [lib[0] for lib in libraries_status if lib[3] == 'dev-requirements.txt'])
         return
 
     # Writing to different requirements files based on usage
@@ -66,13 +79,13 @@ def main(codebase_path, dry_run):
          open(os.path.join(codebase_path, 'test-requirements.txt'), 'w') as test_req_file, \
          open(os.path.join(codebase_path, 'dev-requirements.txt'), 'w') as dev_req_file:
 
-        for line in libraries:
-            if line in src_libraries:
-                req_file.write(line + '\n')
-            elif line in test_libraries and line not in src_libraries:
-                test_req_file.write(line + '\n')
-            elif line not in src_libraries and line not in test_libraries:
-                dev_req_file.write(line + '\n')
+        for line in libraries_status:
+            if line[3] == 'requirements.txt':
+                req_file.write(line[0] + '==' + line[1] + '\n')
+            elif line[3] == 'test-requirements.txt':
+                test_req_file.write(line[0] + '==' + line[1] + '\n')
+            elif line[3] == 'dev-requirements.txt':
+                dev_req_file.write(line[0] + '==' + line[1] + '\n')
 
     print("Updated requirements files based on usage.")
 
