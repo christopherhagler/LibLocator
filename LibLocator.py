@@ -25,7 +25,7 @@ def extract_library_name_and_version(line):
     return line.strip(), ''
 
 # Function to check if a library is used in a specific directory and log the usage
-def log_library_usage(library, directory_path):
+def is_library_used(library, directory_path):
     for root, dirs, files in os.walk(directory_path):
         for file in files:
             if file.endswith('.py'):
@@ -56,8 +56,8 @@ def main(codebase_path, dry_run):
             continue
 
         lib_name, version = extract_library_name_and_version(line)
-        used_in_src = log_library_usage(lib_name, src_path)
-        used_in_test = log_library_usage(lib_name, test_path)
+        used_in_src = is_library_used(lib_name, src_path)
+        used_in_test = is_library_used(lib_name, test_path)
 
         if used_in_src:
             usage = 'src'
@@ -101,7 +101,7 @@ def main(codebase_path, dry_run):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Categorize dependencies based on usage in src and test directories.")
     parser.add_argument('-f', '--folder', required=True, help="Path to the codebase folder.")
-    parser.add_argument('-m', '--dry-run', action='store_true', help="Perform a dry run without making actual changes.")
+    parser.add_argument('-m', '--mock-run', action='store_true', help="Perform a mock run without making actual changes.")
     args = parser.parse_args()
 
     main(args.folder, args.dry_run)
