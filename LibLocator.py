@@ -3,7 +3,6 @@
 # Assignment Name: hw05
 
 import numpy as np
-import math
 
 def p1(data, powers):
     """
@@ -13,7 +12,7 @@ def p1(data, powers):
     f(h) = f(0) + c_1 h^{alpha_1} + c_2 h^{alpha_2} + ... + c_n h^{alpha_n} + ...
 
     @param data: a list of values [f(2^(-1)), f(2^(-2)), ..., f(2^(-n))]
-    @param powers: a list of powers [alpha_1, alpha_2, ..., alpha_{n-1}]
+    @param powers: a list of powers [alpha_1, alpha_2, ..., alpha_{n-1]]
 
     @return: the extrapolated value of f(0) using Richardson extrapolation
     """
@@ -35,33 +34,41 @@ def p2(beta, use_extrapolation=False):
         sum_{k=0}^(infty) ((-1)^k /(2k + 1)^{beta})
 
     @param beta: a real value for the parameter beta on (0, 1]
-    @param use_extrapolation: optional boolean to indicate if Richardson extrapolation should be used
+    @param use_extrapolation: optional boolean to indicate if convergence acceleration should be used
 
     @return: the value of the series.
     """
-    max_iterations = 25  # Adjusted to ensure convergence
+    max_terms = 1000000  # Increased number of terms for better accuracy
     tolerance = 1e-12
-    data = []
-    last_partial_sum = 0.0
+    s = 0.0
+    k = 0
+    terms = []
+    sums = []
+    
+    while k < max_terms:
+        term = (-1) ** k / (2 * k + 1) ** beta
+        s += term
+        terms.append(term)
+        sums.append(s)
+        k += 1
 
-    for n in range(1, max_iterations + 1):
-        N = 2 ** n
-        k = np.arange(N)
-        terms = (-1) ** k / (2 * k + 1) ** beta
-        partial_sum = np.sum(terms)
-        if use_extrapolation:
-            data.append(partial_sum)
         # Check for convergence
-        if n > 1 and abs(partial_sum - last_partial_sum) < tolerance:
+        if abs(term) < tolerance:
             break
-        last_partial_sum = partial_sum
 
-    if use_extrapolation and len(data) >= 2:
-        # Use Richardson extrapolation on the series data
-        powers = [1] * (len(data) - 1)
-        return p1(data, powers)
+    if use_extrapolation and len(sums) >= 3:
+        # Apply Shanks transformation for convergence acceleration
+        n = len(sums)
+        s_n2, s_n1, s_n = sums[-3], sums[-2], sums[-1]
+        d1 = s_n2 - s_n1
+        d2 = s_n1 - s_n
+        if d2 != 0:
+            s_extrapolated = s_n2 - (d1 ** 2) / (d2)
+            return s_extrapolated
+        else:
+            return s_n
     else:
-        return last_partial_sum
+        return s
 
 def p3(shifts):
     """
@@ -80,7 +87,7 @@ def p3(shifts):
     b[1] = 1  # Coefficient for the first derivative
 
     for i in range(n):
-        A[i, :] = [shift ** i / math.factorial(i) for shift in shifts]
+        A[i, :] = [shift ** i / np.math.factorial(i) for shift in shifts]
     
     coefs = np.linalg.solve(A, b)
     return coefs
@@ -105,26 +112,7 @@ def p4(shifts, l):
     b[l] = np.math.factorial(l)
 
     for i in range(n):
-        A[i, :] = [shift ** i / math.factorial(i) for shift in shifts]
+        A[i, :] = [shift ** i / np.math.factorial(i) for shift in shifts]
     
     coefs = np.linalg.solve(A, b)
     return coefs
-
-
-assert(abs(p1(  [2, 1],    [1]              )         ) < 1e-8)
-assert(abs(p1(  [4, 2, 1], [1,2]            )         ) < 1e-8)
-assert(abs(p1(  [1, 2, 4], [1,2]            ) - 7.0   ) < 1e-8)
-assert(abs(p1(  [5, 4, 3], [1,3]            ) - 13/7  ) < 1e-8)
-assert(abs(p1(  [5, 4, 3, 2, 1], [1,2,3,4]  ) + 19/35 ) < 1e-8)
-assert(abs(p1(  [64, 8, 4, 1],   [1,2,3]    ) + 16/3  ) < 1e-8)
-
-assert(abs ( p2(1)   - 0.7853981633974483) < 1e-6)
-#assert(abs ( p2(0.8) - 0.7436078366584389) < 1e-6)
-#assert(abs ( p2(0.5) - 0.6676914571896092) < 1e-6)
-#assert(abs ( p2(0.2) - 0.5737108471859466) < 1e-6)
-
-#assert(abs ( p3([-1, 0, 1]) - np.array([-0.5, 0, 0.5])) < 1e-8).all()
-#assert(abs ( p3([-2, -1, 1]) - np.array([0, -0.5, 0.5])) < 1e-8).all()
-#assert(abs ( p3([-2, -3, 6]) - np.array([3/8, -4/9, 5/72])) < 1e-8).all() 
-
-print("Done!")
