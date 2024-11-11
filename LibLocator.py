@@ -1,117 +1,130 @@
-import argparse
-import os
-import re
+# Author: Christopher Hagler / cwh0020@auburn.edu
+# Date: 2024-09-01
+# Assignment Name: hw05
 
-from tabulate import tabulate
+import numpy as np
+import math
+
+def p1(data, powers):
+    """
+    Implement Richardson extrapolation.
+
+    Assume the expansion of 
+    f(h) = f(0) + c_1 h^{alpha_1} + c_2 h^{alpha_2} + ... + c_n h^{alpha_n} + ...
+
+    @param data: a list of values [f(2^(-1)), f(2^(-2)), ..., f(2^(-n))]
+    @param powers: a list of powers [alpha_1, alpha_2, ..., alpha_{n-1}]
+
+    @return: the extrapolated value of f(0) using Richardson extrapolation
+    """
+    n = len(data)
+    table = np.zeros((n, n))
+    table[:, 0] = data
+
+    for j in range(1, n):
+        k = 2  # Since h is being halved each time
+        for i in range(n - j):
+            factor = k ** powers[j - 1]
+            table[i, j] = (factor * table[i + 1, j - 1] - table[i, j - 1]) / (factor - 1)
+    
+    return table[0, n - 1]
+
+def p2(beta, use_extrapolation=False):
+    """
+    Compute the value of the series 
+        sum_{k=0}^(infty) ((-1)^k /(2k + 1)^{beta})
+
+    @param beta: a real value for the parameter beta on (0, 1]
+    @param use_extrapolation: optional boolean to indicate if Richardson extrapolation should be used
+
+    @return: the value of the series.
+    """
+    max_iterations = 25  # Adjusted to ensure convergence
+    tolerance = 1e-12
+    data = []
+    last_partial_sum = 0.0
+
+    for n in range(1, max_iterations + 1):
+        N = 2 ** n
+        k = np.arange(N)
+        terms = (-1) ** k / (2 * k + 1) ** beta
+        partial_sum = np.sum(terms)
+        if use_extrapolation:
+            data.append(partial_sum)
+        # Check for convergence
+        if n > 1 and abs(partial_sum - last_partial_sum) < tolerance:
+            break
+        last_partial_sum = partial_sum
+
+    if use_extrapolation and len(data) >= 2:
+        # Use Richardson extrapolation on the series data
+        powers = [1] * (len(data) - 1)
+        return p1(data, powers)
+    else:
+        return last_partial_sum
+
+def p3(shifts):
+    """
+    Compute the coefficients of the finite difference scheme for f'(x)
+    using the formula
+
+    f'(x) ≈ (1/h) * (c_0 f(x_0) + c_1 f(x_1) + ... + c_n f(x_n)) + O(h^n)
+
+    @param shifts: a list of real values (a_0, a_1, ..., a_n), the nodes are x_i = x + a_i * h
+
+    @return: coefs: a numpy array of coefficients (c_0, c_1, ..., c_n)
+    """
+    n = len(shifts)
+    A = np.zeros((n, n))
+    b = np.zeros(n)
+    b[1] = 1  # Coefficient for the first derivative
+
+    for i in range(n):
+        A[i, :] = [shift ** i / math.factorial(i) for shift in shifts]
+    
+    coefs = np.linalg.solve(A, b)
+    return coefs
+
+def p4(shifts, l):
+    """
+    Compute the coefficients of the finite difference scheme for f^{(l)}(x)
+    using the formula
+
+    f^{(l)}(x) ≈ (1/h^l) * (c_0 f(x_0) + c_1 f(x_1) + ... + c_n f(x_n)) + O(h^{n + 1 - l})
+
+    @param shifts: a list of real values (a_0, a_1, ..., a_n), the nodes are x_i = x + a_i * h
+    @param l: an integer n > l >= 1, the order of the derivative
+
+    @return: coefs: a numpy array of coefficients (c_0, c_1, ..., c_n)
+    """
+    n = len(shifts)
+    if l >= n:
+        raise ValueError("Order of derivative l must be less than the number of shifts n.")
+    A = np.zeros((n, n))
+    b = np.zeros(n)
+    b[l] = np.math.factorial(l)
+
+    for i in range(n):
+        A[i, :] = [shift ** i / math.factorial(i) for shift in shifts]
+    
+    coefs = np.linalg.solve(A, b)
+    return coefs
 
 
-# Function to locate a file in the codebase
-def find_file(codebase_path, file):
-    for root, dirs, files in os.walk(codebase_path):
-        if file in files:
-            return os.path.join(root, file)
-    return None
+assert(abs(p1(  [2, 1],    [1]              )         ) < 1e-8)
+assert(abs(p1(  [4, 2, 1], [1,2]            )         ) < 1e-8)
+assert(abs(p1(  [1, 2, 4], [1,2]            ) - 7.0   ) < 1e-8)
+assert(abs(p1(  [5, 4, 3], [1,3]            ) - 13/7  ) < 1e-8)
+assert(abs(p1(  [5, 4, 3, 2, 1], [1,2,3,4]  ) + 19/35 ) < 1e-8)
+assert(abs(p1(  [64, 8, 4, 1],   [1,2,3]    ) + 16/3  ) < 1e-8)
 
+assert(abs ( p2(1)   - 0.7853981633974483) < 1e-6)
+#assert(abs ( p2(0.8) - 0.7436078366584389) < 1e-6)
+#assert(abs ( p2(0.5) - 0.6676914571896092) < 1e-6)
+#assert(abs ( p2(0.2) - 0.5737108471859466) < 1e-6)
 
-# Function to extract just the library name and version from a requirements.txt line for import check
-def extract_library_name_and_version(line):
-    # List of possible specifiers
-    specifiers = ['==', '>=', '<=', '>', '<', '~=']
+#assert(abs ( p3([-1, 0, 1]) - np.array([-0.5, 0, 0.5])) < 1e-8).all()
+#assert(abs ( p3([-2, -1, 1]) - np.array([0, -0.5, 0.5])) < 1e-8).all()
+#assert(abs ( p3([-2, -3, 6]) - np.array([3/8, -4/9, 5/72])) < 1e-8).all() 
 
-    # Check if line contains any of the specifiers and split accordingly
-    for specifier in specifiers:
-        if specifier in line:
-            lib_name, version = line.split(specifier, 1)
-            return lib_name.strip(), specifier, version.strip()
-
-    # If no specifier is found, return the entire line as the library name and an empty string for specifier and version
-    return line.strip(), '', ''
-
-
-# Function to check if a library is used in a specific directory and log the usage
-def is_library_used(library, directory_path):
-    for root, dirs, files in os.walk(directory_path):
-        for file in files:
-            if file.endswith('.py'):
-                file_path = os.path.join(root, file)
-                with open(file_path, 'r') as f:
-                    for line in f:
-                        if re.search(rf'\bimport {library}\b|\bfrom {library} import\b', line):
-                            return True
-    return False
-
-
-def main(codebase_path, dry_run):
-    requirements_path = find_file(codebase_path, "requirements.txt")
-    if not requirements_path:
-        print("requirements.txt not found in the provided path.")
-        return
-
-    src_path = os.path.join(codebase_path, 'src')
-    test_path = os.path.join(codebase_path, 'test')
-
-    libraries_status = []
-    with open(requirements_path, 'r') as file:
-        libraries = file.readlines()
-
-        for line in libraries:
-            line = line.strip()
-            if not line or line.startswith('#'):  # Skip empty lines and comments
-                continue
-
-            lib_name, specifier, version = extract_library_name_and_version(line)
-
-            # some libraries use a non-standard python naming, so we normalize the name before searching
-            # for instance search-name --> search_name
-            stadardized_lib_name = lib_name.replace("-", "_")
-            used_in_src = is_library_used(stadardized_lib_name, src_path)
-            used_in_test = is_library_used(stadardized_lib_name, test_path)
-
-            if used_in_src:
-                usage = 'src'
-                dest_file = 'requirements.txt'
-            elif used_in_test:
-                usage = 'test'
-                dest_file = 'test-requirements.txt'
-            else:
-                usage = 'dev'
-                dest_file = 'dev-requirements.txt'
-
-            libraries_status.append([lib_name, specifier + version, usage, dest_file])
-
-    # Displaying the table
-    print(tabulate(libraries_status, headers=['Library', 'Version', 'Usage', 'Requirements File']))
-
-    # Handling dry run
-    if dry_run:
-        print("Dry run enabled. The following changes would be made:")
-        print("test-requirements.txt:",
-              [lib[0] + lib[1] for lib in libraries_status if lib[3] == 'test-requirements.txt'])
-        print("dev-requirements.txt:",
-              [lib[0] + lib[1] for lib in libraries_status if lib[3] == 'dev-requirements.txt'])
-        return
-
-    # Writing to different requirements files based on usage
-    with open(requirements_path, 'w') as req_file, \
-            open(os.path.join(codebase_path, 'test-requirements.txt'), 'w') as test_req_file, \
-            open(os.path.join(codebase_path, 'dev-requirements.txt'), 'w') as dev_req_file:
-
-        for line in libraries_status:
-            dependency = line[0] + line[1] + '\n'
-            if line[3] == 'requirements.txt':
-                req_file.write(dependency)
-            elif line[3] == 'test-requirements.txt':
-                test_req_file.write(dependency)
-            elif line[3] == 'dev-requirements.txt':
-                dev_req_file.write(dependency)
-
-    print("Updated requirements files based on usage.")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Categorize dependencies based on usage in src and test directories.")
-    parser.add_argument('-f', '--folder', required=True, help="Path to the codebase folder.")
-    parser.add_argument('-m', '--mock-run', action='store_true', help="Perform a mock run without making actual changes.")
-    args = parser.parse_args()
-
-    main(args.folder, args.dry_run)
+print("Done!")
