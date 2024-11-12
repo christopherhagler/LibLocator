@@ -28,47 +28,43 @@ def p1(data, powers):
     
     return table[0, n - 1]
 
-def p2(beta, use_extrapolation=False):
+def compute_A_beta(beta, m=10):
     """
-    Compute the value of the series 
-        sum_{k=0}^(infty) ((-1)^k /(2k + 1)^{beta})
+    Computes A(beta) using Richardson extrapolation.
 
-    @param beta: a real value for the parameter beta on (0, 1]
-    @param use_extrapolation: optional boolean to indicate if convergence acceleration should be used
+    Parameters:
+    beta (float): The exponent in the series, where 0 < beta <= 1.
+    m (int): Number of data points for extrapolation (should not exceed 15).
 
-    @return: the value of the series.
+    Returns:
+    A_beta (float): The extrapolated value of the series A(beta).
     """
-    max_terms = 1000000  # Increased number of terms for better accuracy
-    tolerance = 1e-12
-    s = 0.0
-    k = 0
-    terms = []
-    sums = []
+    # Initialize arrays
+    ak = np.zeros(m)
+    hk = np.zeros(m)
     
-    while k < max_terms:
-        term = (-1) ** k / (2 * k + 1) ** beta
-        s += term
-        terms.append(term)
-        sums.append(s)
-        k += 1
-
-        # Check for convergence
-        if abs(term) < tolerance:
-            break
-
-    if use_extrapolation and len(sums) >= 3:
-        # Apply Shanks transformation for convergence acceleration
-        n = len(sums)
-        s_n2, s_n1, s_n = sums[-3], sums[-2], sums[-1]
-        d1 = s_n2 - s_n1
-        d2 = s_n1 - s_n
-        if d2 != 0:
-            s_extrapolated = s_n2 - (d1 ** 2) / (d2)
-            return s_extrapolated
-        else:
-            return s_n
-    else:
-        return s
+    for k in range(1, m + 1):
+        h_k = 2 ** (-k)
+        N = int(1 / h_k)
+        hk[k - 1] = h_k
+        
+        # Compute partial sum up to N
+        i = np.arange(N + 1)
+        terms = (-1) ** i / (2 * i + 1) ** beta
+        ak[k - 1] = np.sum(terms)
+    
+    # Build the matrix H for least squares
+    n_terms = m  # Number of terms in the model
+    H = np.zeros((m, n_terms))
+    H[:, 0] = 1  # First column is ones for A(beta)
+    for j in range(1, n_terms):
+        H[:, j] = hk ** (beta + j - 1)
+    
+    # Solve the least squares problem
+    # Y = H * C, where Y = ak, C = [A_beta, c1, c2, ..., c_{n_terms-1}]
+    C, residuals, rank, s = np.linalg.lstsq(H, ak, rcond=None)
+    A_beta = C[0]
+    return A_beta
 
 def p3(shifts):
     """
